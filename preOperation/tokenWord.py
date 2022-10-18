@@ -16,8 +16,10 @@ chineseNum = 300
 class Vocab():
     def __init__(self, path):
         self.data = self.getTxtData(path)
-        self.wordToIndex, self.IndexToWord = self.buildVocab(self.countWord(self.wordTag(self.data[:, 1], 0)), chineseNum)
-        self.indexData = self.dataSentence(self.data[:, 1])
+        self.model = 0
+        self.wordToIndex, self.IndexToWord = self.buildVocab(self.countWord(self.wordTag(self.data[:, 0])),
+                                                             chineseNum)
+        self.indexData = self.dataSentence(self.data[:, 0], 1)
 
     # 获取txt数据
     def getTxtData(self, path):
@@ -26,12 +28,25 @@ class Vocab():
         return data
 
     # 单个语句分词
+    # 0代表中文，1代表英文
     def cutLine(self, sentence):
-        senList = jieba.lcut(sentence)
+        if self.model == 0:
+            senList = jieba.lcut(sentence)
+        else:
+            sentence = sentence.lower()  # 所有字母小写
+            del_estr = string.punctuation + string.digits + string.whitespace  # 去除ASCII，标点符号，数字
+            del_estr = del_estr.replace('-', '')  # 保留- 因为tag里有很多-有用
+            replace = " " * len(del_estr)
+            tran_tab = str.maketrans(del_estr, replace)
+            sentence = sentence.translate(tran_tab)  # 完成上述去除标点符号的功能
+            words = sentence.split(' ')  # 根据空格把句子分隔成单词
+            while '' in words:
+                words.remove('')  # 去除为空格的空值
+            senList = words
         return senList
 
     # 获取词袋
-    def wordTag(self, sentences, model):
+    def wordTag(self, sentences):
         lineTotal = []
         wordTotal = []
         for sentence in sentences:
@@ -86,5 +101,5 @@ class Vocab():
 
 
 if __name__ == '__main__':
-    # getTxtData('../tranDataset/cmn-eng/cmn.txt')
     vocab = Vocab('../tranDataset/cmn-eng/cmn.txt')
+
