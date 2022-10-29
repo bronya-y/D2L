@@ -9,22 +9,33 @@ from operator import itemgetter
 import codecs
 import sys
 
+import torch
+
 engNum = 300
 chineseNum = 300
-
+sentenceNum = 119987
 
 class Vocab():
     def __init__(self, path):
+        self.sentenceNum = sentenceNum
+        self.chineseNum = chineseNum
+        self.maxLen = 30
         self.data = self.getTxtData(path)
         self.model = 0
-        self.wordToIndex, self.IndexToWord = self.buildVocab(self.countWord(self.wordTag(self.data[:, 0])),
+        self.wordToIndex, self.IndexToWord = self.buildVocab(self.countWord(self.wordTag(self.data[:sentenceNum, 1])),
                                                              chineseNum)
-        self.indexData = self.dataSentence(self.data[:, 0], 1)
+        self.indexData = torch.LongTensor(np.array(self.dataSentence(self.data[:sentenceNum, 1])))
+        self.label = torch.from_numpy(np.array(self.data[:, 0]).astype(float)).unsqueeze(1)
+        # self.label = torch.tensor(self.label, dtype=torch.long)
 
     # 获取txt数据
     def getTxtData(self, path):
-        data = pd.read_csv(path, sep="\t", header=None)
+        # data = pd.read_csv(path, sep="\t", header=None)
+        data= pd.read_csv(path)
         data = data.to_numpy()
+        data1 = data[:1000]
+        data2 = data[72892:73892]
+        data = np.concatenate((data1,data2),axis=0)
         return data
 
     # 单个语句分词
@@ -88,18 +99,26 @@ class Vocab():
         tag = []
         for w in self.cutLine(sentence):
             tag = tag + self.getId(w)
-        return tag
+        return self.pad(tag)
+
+    def pad(self, sentence, words=301):
+        if len(sentence) < self.maxLen:
+            for i in range(self.maxLen-len(sentence)):
+                sentence.append(words)
+        else:
+            sentence = sentence[:self.maxLen]
+        return sentence
+
 
     # data从文字转index格式
     def dataSentence(self, data):
         tag = []
         for sentence in data:
-            tag = tag + self.indexSentence(sentence)
-        tagAns = np.array(tag)
-        print(len(tagAns))
-        return tagAns
+            tag.append(self.indexSentence(sentence))
+        return tag
 
 
 if __name__ == '__main__':
-    vocab = Vocab('../tranDataset/cmn-eng/cmn.txt')
+    # vocab = Vocab('../tranDataset/cmn-eng/cmn.txt')
+    vocab1 = Vocab('../tranDataset/cls/weibo_senti_100k.csv')
 
