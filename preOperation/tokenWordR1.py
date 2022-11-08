@@ -11,28 +11,29 @@ import sys
 
 import torch
 
-engNum = 300
-chineseNum = 300
-sentenceNum = 119987
+# engNum = 300
+# chineseNum = 300
+# sentenceNum = 119987
 
 
 class Vocab():
-    def __init__(self, path, model=0):
+    def __init__(self, path, model=0, engNum=300, chineseNum=300, sentenceNum=119987, dataCol=1, labelCol=0):
         self.sentenceNum = sentenceNum
         self.chineseNum = chineseNum
+        self.engNum = engNum
         self.maxLen = 30
         self.data = self.getTxtData(path)
         self.model = model
-        self.wordToIndex, self.IndexToWord = self.buildVocab(self.countWord(self.wordTag(self.data[:sentenceNum, 1])),
-                                                             chineseNum)
-        self.indexData = torch.LongTensor(np.array(self.dataSentence(self.data[:sentenceNum, 1])))
-        self.label = torch.from_numpy(np.array(self.data[:, 0]).astype(float)).unsqueeze(1)
+        self.wordToIndex, self.IndexToWord = self.buildVocab(self.countWord(self.wordTag(self.data[:sentenceNum, dataCol])),
+                                                             self.chineseNum)
+        self.indexData = torch.LongTensor(np.array(self.dataSentence(self.data[:sentenceNum, dataCol])))
+        # self.label = torch.from_numpy(np.array(self.data[:, labelCol]).astype(float)).unsqueeze(1)
         # self.label = torch.tensor(self.label, dtype=torch.long)
 
     # 获取txt数据
     def getTxtData(self, path):
         # data = pd.read_csv(path, sep="\t", header=None)
-        data = pd.read_csv(path)
+        data = pd.read_csv(path, sep="\t", header=None)
         data = data.to_numpy()
         data1 = data[:1000]
         data2 = data[72892:73892]
@@ -80,6 +81,8 @@ class Vocab():
     # 获取词频前Num个
     # 建立词汇表
     def buildVocab(self, data, wordNum):
+        if self.model == 1:
+            wordNum = self.engNum
         sortWords, sortedWordToCnt = data
         vocab = sortWords[:wordNum]
         vocab = vocab + ['<unk>']
@@ -117,7 +120,12 @@ class Vocab():
             tag.append(self.indexSentence(sentence))
         return tag
 
-
+    # 单sentence转文字
+    def sentenceWordToIndex(self,sentence):
+        tag = []
+        for sen in sentence:
+            tag.append(self.IndexToWord[sen])
+        return tag
 if __name__ == '__main__':
-    # vocab = Vocab('../tranDataset/cmn-eng/cmn.txt')
-    vocab1 = Vocab('../tranDataset/cls/weibo_senti_100k.csv')
+    vocab = Vocab('../tranDataset/cmn-eng/cmn.txt')
+    # vocab1 = Vocab('../tranDataset/cls/weibo_senti_100k.csv')
