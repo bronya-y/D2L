@@ -1,5 +1,7 @@
+import collections
 import string
 from abc import abstractmethod, ABCMeta, ABC
+from operator import itemgetter
 
 import jieba
 
@@ -16,11 +18,13 @@ class VocabRule(ABC):
     language 语言类型
     seqNum 长度
     col 所需数据在文件中的位置
+    wordNum 取频率最高的wordNum个词
     """
 
-    def __init__(self, path, seqNum, language, col, seq="\t"):
+    def __init__(self, path, seqNum, language, col, wordNum, seq="\t"):
         self.seqNum = seqNum
         self.language = language
+        self.wordNum = wordNum
         self.seq = seq
         self.dataInit = self.getData(path)
         self.dataIndex = self.dataSentence(self.dataInit)
@@ -60,23 +64,40 @@ class VocabRule(ABC):
     # 获取词袋
     @abstractmethod
     def wordTag(self, sentences):
-        pass
+        lineTotal = []
+        wordTotal = []
+        for sentence in sentences:
+            lineTotal.append(self.cutLine(sentence))
+        for line in lineTotal:
+            wordTotal = wordTotal + line
+        return wordTotal
 
     # 统计频率
     @abstractmethod
     def countWord(self, wordTotal):
-        pass
+        counter = collections.Counter()
+        for word in wordTotal:
+            counter[word] += 1
+        sortedWordToCnt = sorted(counter.items(), key=itemgetter(1), reverse=True)
+        sortWords = [x[0] for x in sortedWordToCnt]
+        return sortWords, sortedWordToCnt
 
-    # 获取词频前Num个
     # 建立词汇表
     @abstractmethod
-    def buildVocab(self, data, wordNum):
-        pass
+    def buildVocab(self, sortWords):
+        vocab = sortWords[:self.wordNum]
+        vocab = vocab + ['<unk>']
+        wordToIndex = {k: v for (k, v) in zip(vocab, range(len(vocab)))}
+        indexToWord = {k: v for (k, v) in zip(range(len(vocab)), vocab)}
+        return wordToIndex, indexToWord
 
     # 获取word对应Index
     @abstractmethod
     def getId(self, word):
-        pass
+        if word in self.wordToIndex:
+            return [self.wordToIndex[word]]
+        else:
+            return [self.wordToIndex['<unk>']]
 
     # 单sentence转index
     @abstractmethod
